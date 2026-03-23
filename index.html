@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Digit Explorer | 檢查數位探索器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.3/cdn.min.js" defer></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Nunito:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Nunito', 'Noto Sans TC', sans-serif;
+            background-color: #f0fdf4;
+            color: #1e293b;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-box {
+            transition: all 0.3s ease;
+        }
+        
+        .step-box:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 250px;
+            background-color: #334155;
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -125px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.875rem;
+            font-weight: normal;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #334155 transparent transparent transparent;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body x-data="appData()" class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-emerald-600 text-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-barcode text-2xl"></i>
+                <h1 class="text-xl font-bold" x-text="t('appTitle')"></h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm opacity-90 hidden sm:inline font-medium">Created by Sam Li</span>
+                <button @click="toggleLang()" class="bg-emerald-700 hover:bg-emerald-800 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors flex items-center shadow-sm border border-emerald-500">
+                    <i class="fas fa-language text-lg mr-2"></i>
+                    <span>中文 / EN</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-5xl space-y-12">
+        
+        <!-- Introduction Section -->
+        <section class="bg-white rounded-2xl shadow-sm p-6 md:p-8 border-t-4 border-emerald-500 fade-in">
+            <h2 class="text-3xl font-bold mb-6 text-emerald-800 flex items-center">
+                <i class="fas fa-lightbulb text-yellow-400 mr-3"></i>
+                <span x-text="t('introTitle')"></span>
+            </h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div class="space-y-4">
+                    <p class="text-gray-700 leading-relaxed text-lg" x-text="t('introDesc')"></p>
+                    <div class="bg-emerald-50 p-5 rounded-xl border border-emerald-100 shadow-inner">
+                        <h3 class="font-bold text-emerald-800 mb-2 flex items-center text-lg">
+                            <i class="fas fa-shield-alt mr-2"></i><span x-text="t('redundancyTitle')"></span>
+                        </h3>
+                        <p class="text-gray-700 leading-relaxed" x-text="t('redundancyDesc')"></p>
+                    </div>
+                </div>
+                <div class="space-y-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
+                    <h3 class="font-bold text-gray-800 border-b-2 border-gray-200 pb-2 text-lg" x-text="t('errorsTitle')"></h3>
+                    <ul class="space-y-4 mt-4">
+                        <li class="flex items-start bg-white p-3 rounded-lg shadow-sm">
+                            <i class="fas fa-keyboard text-red-500 mt-1 mr-3 text-xl"></i>
+                            <div>
+                                <strong class="block text-gray-800" x-text="t('errorTranscription')"></strong>
+                                <span class="text-sm text-gray-600" x-text="t('errorTranscriptionDesc')"></span>
+                            </div>
+                        </li>
+                        <li class="flex items-start bg-white p-3 rounded-lg shadow-sm">
+                            <i class="fas fa-exchange-alt text-orange-500 mt-1 mr-3 text-xl"></i>
+                            <div>
+                                <strong class="block text-gray-800" x-text="t('errorTransposition')"></strong>
+                                <span class="text-sm text-gray-600" x-text="t('errorTranspositionDesc')"></span>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="mt-4 p-3 bg-red-50 rounded-lg text-sm text-red-800 border border-red-100 flex items-start">
+                        <i class="fas fa-exclamation-triangle mt-0.5 mr-2"></i>
+                        <span x-html="t('errorNote')"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Transition Text -->
+        <div class="text-center max-w-3xl mx-auto fade-in" style="animation-delay: 0.1s;">
+            <i class="fas fa-arrow-down text-2xl text-emerald-400 mb-4 animate-bounce"></i>
+            <p class="text-xl text-gray-600 font-medium leading-relaxed" x-text="t('introTransition')"></p>
+        </div>
+
+        <!-- Interactive Calculator Section -->
+        <section class="bg-white rounded-2xl shadow-sm p-6 md:p-8 fade-in" style="animation-delay: 0.2s;">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-8 border-b-2 border-gray-100 pb-4 gap-4">
+                <h2 class="text-3xl font-bold text-emerald-800 flex items-center">
+                    <i class="fas fa-calculator mr-3 text-emerald-600"></i>
+                    <span x-text="t('calcTitle')"></span>
+                </h2>
+                
+                <!-- Format Selector -->
+                <div class="flex items-center bg-gray-100 p-1 rounded-lg">
+                    <button @click="setCalcMode('hkid')" 
+                            class="px-4 py-2 rounded-md font-semibold transition-all"
+                            :class="calcMode === 'hkid' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500 hover:text-gray-700'">
+                        HKID
+                    </button>
+                    <button @click="setCalcMode('isbn10')" 
+                            class="px-4 py-2 rounded-md font-semibold transition-all"
+                            :class="calcMode === 'isbn10' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500 hover:text-gray-700'">
+                        ISBN-10
+                    </button>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="mb-8 bg-gradient-to-br from-gray-50 to-emerald-50/30 p-6 md:p-8 rounded-2xl border border-gray-200 text-center shadow-inner relative">
+                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                    <label class="block text-xl font-bold text-gray-800" x-text="t('enterData')"></label>
+                    
+                    <!-- Preset Data Dropdown -->
+                    <div class="relative" x-data="{ open: false }">
+                        <button @click="open = !open" @click.away="open = false" class="text-sm bg-white border-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300 px-4 py-2 rounded-lg font-bold transition-all flex items-center shadow-sm">
+                            <i class="fas fa-magic mr-2"></i> <span x-text="t('usePreset')"></span> <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                        </button>
+                        <div x-show="open" x-transition class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl z-10 border border-gray-100 overflow-hidden">
+                            <ul class="py-2 text-sm text-gray-700 text-left font-medium">
+                                <template x-if="calcMode === 'hkid'">
+                                    <div>
+                                        <li><button @click="loadPreset('A', ['1','2','3','4','5','6']); open=false" class="block w-full text-left px-5 py-3 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">A123456</button></li>
+                                        <li><button @click="loadPreset('Z', ['9','8','7','6','5','4']); open=false" class="block w-full text-left px-5 py-3 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">Z987654</button></li>
+                                        <li><button @click="loadPreset('C', ['5','5','5','5','5','5']); open=false" class="block w-full text-left px-5 py-3 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">C555555</button></li>
+                                    </div>
+                                </template>
+                                <template x-if="calcMode === 'isbn10'">
+                                    <div>
+                                        <li><button @click="loadPresetISBN(['0','2','0','1','5','3','0','8','2']); open=false" class="block w-full text-left px-5 py-3 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">0-201-53082</button></li>
+                                        <li><button @click="loadPresetISBN(['1','4','4','9','3','3','1','8','1']); open=false" class="block w-full text-left px-5 py-3 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">1-4493-3181</button></li>
+                                    </div>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center items-center space-x-2 mb-4">
+                    <template x-if="calcMode === 'isbn10'">
+                        <div class="flex space-x-2 flex-wrap justify-center gap-y-3">
+                            <template x-for="(digit, index) in Array(9)" :key="index">
+                                <input type="text" maxlength="1" class="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none shadow-sm transition-all" 
+                                    x-model="isbnInput[index]" @input="handleIsbnInput(index, $event)">
+                            </template>
+                            <div class="w-12 h-14 flex items-center justify-center text-2xl font-bold bg-emerald-100 border-2 border-emerald-500 rounded-lg text-emerald-800 shadow-sm" x-text="isbnResult"></div>
+                        </div>
+                    </template>
+                    <template x-if="calcMode === 'hkid'">
+                        <div class="flex space-x-2 items-center flex-wrap justify-center gap-y-3">
+                            <input type="text" maxlength="1" class="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none uppercase shadow-sm transition-all" 
+                                x-model="hkidPrefix" @input="handleHkidPrefix($event)">
+                            <template x-for="(digit, index) in Array(6)" :key="index">
+                                <input type="text" maxlength="1" class="w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:outline-none shadow-sm transition-all" 
+                                    x-model="hkidNums[index]" @input="handleHkidNum(index, $event)">
+                            </template>
+                            <span class="text-3xl font-light text-gray-400 mx-1">(</span>
+                            <div class="w-12 h-14 flex items-center justify-center text-2xl font-bold bg-emerald-100 border-2 border-emerald-500 rounded-lg text-emerald-800 shadow-sm" x-text="hkidResult"></div>
+                            <span class="text-3xl font-light text-gray-400 mx-1">)</span>
+                        </div>
+                    </template>
+                </div>
+                <p class="text-gray-500 mt-4 font-medium" x-text="calcMode === 'isbn10' ? t('isbnHint') : t('hkidHint')"></p>
+                
+                <div class="mt-8 flex justify-center space-x-4">
+                    <button @click="calculate()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center text-lg">
+                        <i class="fas fa-play mr-2"></i> <span x-text="t('btnCalculate')"></span>
+                    </button>
+                    <button @click="resetCalc()" class="bg-white border-2 border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 px-8 rounded-xl transition-all shadow-sm flex items-center text-lg">
+                        <i class="fas fa-undo mr-2"></i> <span x-text="t('btnReset')"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Calculation Steps Visualization -->
+            <div x-show="showSteps" x-transition:enter="transition ease-out duration-500" x-transition:enter-start="opacity-0 transform translate-y-4" x-transition:enter-end="opacity-100 transform translate-y-0" class="mt-12">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center flex items-center justify-center">
+                    <i class="fas fa-cogs text-gray-400 mr-3"></i>
+                    <span x-text="t('stepByStep')"></span>
+                </h3>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-blue-800 text-sm">
+                    <p><i class="fas fa-info-circle mr-2"></i><strong x-text="t('whyWeightsTitle')"></strong> <span x-text="t('whyWeightsDesc')"></span></p>
+                </div>
+
+                <div class="overflow-x-auto pb-4 mb-6">
+                    <table class="w-full min-w-max border-collapse rounded-xl overflow-hidden shadow-sm">
+                        <thead>
+                            <tr class="bg-gray-800 text-white">
+                                <th class="p-4 border-b border-gray-700 text-left font-semibold" x-text="t('tblChar')"></th>
+                                <template x-for="item in stepData" :key="item.id">
+                                    <th class="p-4 border-b border-gray-700 text-center font-bold text-xl" x-text="item.char"></th>
+                                </template>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="p-4 border-b border-gray-200 font-semibold bg-blue-50/50 text-blue-800" x-text="t('tblValue')"></td>
+                                <template x-for="item in stepData" :key="item.id">
+                                    <td class="p-4 border-b border-gray-200 text-center bg-white text-lg" x-text="item.val"></td>
+                                </template>
+                            </tr>
+                            <tr>
+                                <td class="p-4 border-b border-gray-200 font-semibold bg-purple-50/50 text-purple-800 tooltip">
+                                    <span x-text="t('tblWeight')"></span>
+                                    <i class="fas fa-info-circle text-purple-400 ml-1 cursor-help"></i>
+                                    <!-- <span class="tooltiptext" x-text="t('weightTooltip')"></span> -->
+                                </td>
+                                <template x-for="item in stepData" :key="item.id">
+                                    <td class="p-4 border-b border-gray-200 text-center bg-white text-lg font-medium text-purple-700" x-text="'× ' + item.weight"></td>
+                                </template>
+                            </tr>
+                            <tr>
+                                <td class="p-4 border-b border-gray-200 font-bold bg-orange-50/50 text-orange-800" x-text="t('tblProduct')"></td>
+                                <template x-for="item in stepData" :key="item.id">
+                                    <td class="p-4 border-b border-gray-200 text-center bg-orange-50 font-bold text-xl text-orange-700" x-text="item.product"></td>
+                                </template>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-sm text-gray-500 mb-8 italic text-center" x-text="calcMode === 'hkid' ? t('hkidValueNote') : ''"></p>
+
+                <!-- Deep Dive Explanations -->
+                <div class="grid lg:grid-cols-3 gap-6 mt-8">
+                    <!-- Step 1 -->
+                    <div class="step-box bg-white border-2 border-orange-200 rounded-2xl p-6 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-2 bg-orange-400"></div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-sm text-orange-600 uppercase font-bold tracking-wider" x-text="t('stepSum')"></div>
+                            <div class="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold">1</div>
+                        </div>
+                        <div class="text-4xl font-black text-gray-800 mb-4" x-text="totalSum"></div>
+                        <p class="text-sm text-gray-600 leading-relaxed" x-text="t('stepSumDesc')"></p>
+                    </div>
+                    
+                    <!-- Step 2 -->
+                    <div class="step-box bg-white border-2 border-blue-200 rounded-2xl p-6 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-2 bg-blue-400"></div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-sm text-blue-600 uppercase font-bold tracking-wider" x-text="t('stepMod')"></div>
+                            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">2</div>
+                        </div>
+                        <div class="text-3xl font-bold text-gray-800 mb-2">
+                            <span x-text="totalSum"></span> &divide; <span x-text="modValue"></span>
+                        </div>
+                        <div class="text-xl font-semibold text-gray-600 mb-4">
+                            = <span x-text="Math.floor(totalSum/modValue)"></span> ... <span class="text-red-500 font-black text-2xl bg-red-50 px-2 py-1 rounded" x-text="remainder"></span>
+                        </div>
+                        <div class="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 leading-relaxed">
+                            <strong class="block mb-1"><i class="fas fa-question-circle mr-1"></i><span x-text="t('whyMod11Title')"></span></strong>
+                            <span x-text="t('whyMod11Desc')"></span>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="step-box bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-6 relative overflow-hidden shadow-md">
+                        <div class="absolute top-0 left-0 w-full h-2 bg-emerald-500"></div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-sm text-emerald-700 uppercase font-bold tracking-wider" x-text="t('stepFinal')"></div>
+                            <div class="w-8 h-8 rounded-full bg-emerald-200 text-emerald-700 flex items-center justify-center font-bold">3</div>
+                        </div>
+                        <div class="flex items-end space-x-4 mb-4">
+                            <div class="text-6xl font-black text-emerald-600" x-text="finalDigit"></div>
+                            <div class="text-lg font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-lg mb-2" x-text="finalFormula"></div>
+                        </div>
+                        <div class="bg-white/60 p-3 rounded-lg text-sm text-emerald-900 leading-relaxed">
+                            <strong class="block mb-1"><i class="fas fa-question-circle mr-1"></i><span x-text="t('whySubtractTitle')"></span></strong>
+                            <span x-text="t('whySubtractDesc')"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Transition Text -->
+        <div class="text-center max-w-3xl mx-auto fade-in" style="animation-delay: 0.3s;">
+            <i class="fas fa-link text-2xl text-emerald-400 mb-4"></i>
+            <p class="text-xl text-gray-600 font-medium leading-relaxed" x-text="t('valTransition')"></p>
+        </div>
+
+        <!-- Validation Demo Section -->
+        <section class="bg-white rounded-2xl shadow-sm p-6 md:p-8 fade-in" style="animation-delay: 0.4s;">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <h2 class="text-3xl font-bold text-emerald-800 flex items-center">
+                    <i class="fas fa-check-double mr-3 text-emerald-600"></i>
+                    <span x-text="t('valTitle')"></span>
+                </h2>
+                <!-- Validation Format Selector -->
+                <div class="flex items-center bg-gray-100 p-1 rounded-lg">
+                    <button @click="setValMode('hkid')" 
+                            class="px-4 py-2 rounded-md font-semibold transition-all"
+                            :class="valMode === 'hkid' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500 hover:text-gray-700'">
+                        HKID
+                    </button>
+                    <button @click="setValMode('isbn10')" 
+                            class="px-4 py-2 rounded-md font-semibold transition-all"
+                            :class="valMode === 'isbn10' ? 'bg-white shadow-sm text-emerald-700' : 'text-gray-500 hover:text-gray-700'">
+                        ISBN-10
+                    </button>
+                </div>
+            </div>
+            <p class="mb-4 text-gray-700 text-lg" x-text="t('valDesc')"></p>
+            
+            <div class="bg-gradient-to-br from-gray-50 to-blue-50/30 p-6 md:p-8 rounded-2xl border border-gray-200 shadow-inner">
+                <div class="flex flex-col md:flex-row items-end justify-center gap-4 mb-4">
+                    <div class="w-full max-w-md relative">
+                        <label class="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide" x-text="valMode === 'hkid' ? t('valInputHKID') : t('valInputISBN')"></label>
+                        <input type="text" x-model="valInput" @keyup.enter="validateData()" class="w-full p-4 text-center text-2xl font-mono font-bold border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none uppercase shadow-sm transition-all" :placeholder="valMode === 'hkid' ? 'e.g. A1234563' : 'e.g. 0201530821'">
+                        
+                        <!-- Validation Presets -->
+                        <div class="absolute right-2 top-9" x-data="{ open: false }">
+                            <button @click="open = !open" @click.away="open = false" class="text-xs bg-gray-100 text-gray-600 hover:bg-gray-200 px-2 py-1 rounded font-bold transition-all flex items-center">
+                                <i class="fas fa-magic mr-1"></i> <span x-text="t('usePreset')"></span>
+                            </button>
+                            <div x-show="open" x-transition class="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-xl z-10 border border-gray-100 overflow-hidden">
+                                <ul class="py-1 text-sm text-gray-700 text-left font-medium">
+                                    <template x-if="valMode === 'hkid'">
+                                        <div>
+                                            <li><button @click="valInput='A1234563'; validateData(); open=false" class="block w-full text-left px-4 py-2 hover:bg-blue-50 hover:text-blue-700 transition-colors">A1234563 (Valid)</button></li>
+                                            <li><button @click="valInput='A1234564'; validateData(); open=false" class="block w-full text-left px-4 py-2 hover:bg-red-50 hover:text-red-700 transition-colors">A1234564 (Error)</button></li>
+                                        </div>
+                                    </template>
+                                    <template x-if="valMode === 'isbn10'">
+                                        <div>
+                                            <li><button @click="valInput='0201530821'; validateData(); open=false" class="block w-full text-left px-4 py-2 hover:bg-blue-50 hover:text-blue-700 transition-colors">0201530821 (Valid)</button></li>
+                                            <li><button @click="valInput='0201530822'; validateData(); open=false" class="block w-full text-left px-4 py-2 hover:bg-red-50 hover:text-red-700 transition-colors">0201530822 (Error)</button></li>
+                                        </div>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <button @click="validateData()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 whitespace-nowrap text-lg flex items-center justify-center">
+                        <i class="fas fa-search mr-2"></i><span x-text="t('btnVerify')"></span>
+                    </button>
+                </div>
+                
+                <!-- Validation Result Box -->
+                <div x-show="valResult !== null" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 transform scale-95" x-transition:enter-end="opacity-100 transform scale-100" class="mt-8 p-6 rounded-xl text-left border-2 shadow-sm" 
+                     :class="valResult ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-400'">
+                    
+                    <div class="flex items-center mb-4 font-black text-2xl" :class="valResult ? 'text-green-700' : 'text-red-700'">
+                        <i class="fas mr-3 text-3xl" :class="valResult ? 'fa-check-circle' : 'fa-times-circle'"></i>
+                        <span x-text="valResult ? t('valValid') : t('valInvalid')"></span>
+                    </div>
+                    
+                    <div class="bg-white/80 p-4 rounded-lg mb-4 text-gray-800 text-lg" x-html="valExplanation"></div>
+                    
+                    <!-- The "How it works" explanation -->
+                    <div class="mt-4 border-t border-gray-200/50 pt-4">
+                        <h4 class="font-bold text-gray-800 mb-2 flex items-center">
+                            <i class="fas fa-cogs mr-2 text-gray-500"></i>
+                            <span x-text="t('valHowItWorksTitle')"></span>
+                        </h4>
+                        <p class="text-gray-700 leading-relaxed" x-text="valResult ? t('valHowItWorksSuccess') : t('valHowItWorksFail')"></p>
+                        
+                        <!-- Mathematical Proof for Validation -->
+                        <div class="mt-3 bg-gray-800 text-green-400 font-mono p-3 rounded-lg text-sm overflow-x-auto">
+                            <span class="text-gray-300 block mb-1" x-text="t('valMathProof')"></span>
+                            <span x-text="valMathString"></span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2" x-text="t('valDetectExplain')"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-8 text-center text-sm border-t-4 border-emerald-600">
+        <div class="container mx-auto px-4">
+            <p class="font-semibold text-gray-300 text-base mb-2">Educational Tool for ICT Module A: Information Processing - Data Control</p>
+            <p class="mb-4">Designed for learning purposes. Helps students understand the algorithm behind check digits.</p>
+            <div class="inline-flex items-center justify-center space-x-2 bg-gray-800 px-4 py-2 rounded-full">
+                <i class="fas fa-code text-emerald-500"></i>
+                <span class="text-gray-300 font-medium">Created by Sam Li</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const translations = {
+            en: {
+                appTitle: "Check Digit Explorer",
+                introTitle: "What is a Check Digit?",
+                introDesc: "A check digit is a mathematical tool used by computers to spot typing mistakes. It is a single digit (or letter) added to the end of important numbers like ID cards, ISBNs, or credit cards. It is calculated automatically from all the other digits using a specific formula.",
+                redundancyTitle: "Redundancy Check",
+                redundancyDesc: "This is a form of 'Redundancy Check'. We add extra data (the check digit) to the main data. If someone makes a typo when entering the number, the mathematical check will fail, and the computer will reject the input.",
+                errorsTitle: "Common Errors It Can Catch",
+                errorTranscription: "Transcription Error",
+                errorTranscriptionDesc: "Typing the wrong number (e.g., typing '7' instead of '1').",
+                errorTransposition: "Transposition Error",
+                errorTranspositionDesc: "Swapping two numbers next to each other (e.g., typing '12' instead of '21').",
+                errorNote: "<strong>Note:</strong> Check digits only <em>detect</em> errors; they cannot correct them. Also, they cannot detect <strong>Data Source Errors</strong> (if the original paper document is already wrong, the computer won't know).",
+                introTransition: "Now that we know WHAT it is, let's look at HOW it works. The computer uses a specific formula to calculate this digit. Let's try it step-by-step!",
+                calcTitle: "Step-by-Step Calculator",
+                selectFormat: "Select Format:",
+                enterData: "Enter Data to Calculate Check Digit",
+                usePreset: "Use Preset",
+                isbnHint: "Enter the first 9 digits of an ISBN-10.",
+                hkidHint: "Enter 1 letter and 6 digits for HKID.",
+                btnCalculate: "Calculate Check Digit",
+                btnReset: "Reset",
+                stepByStep: "The Mathematical Process",
+                whyWeightsTitle: "Why use 'Weights'?",
+                whyWeightsDesc: "If we just added the numbers (1+2 = 3), swapping them (2+1 = 3) wouldn't change the sum. By multiplying each position by a different 'weight' (e.g., 1×8 + 2×7 = 22 vs 2×8 + 1×7 = 23), the total sum changes if digits are swapped. This is how the computer detects transposition errors!",
+                tblChar: "Character",
+                tblValue: "Value",
+                tblWeight: "Weight",
+                weightTooltip: "Weights are multipliers assigned to each position to ensure that swapping digits changes the final sum.",
+                tblProduct: "Product",
+                hkidValueNote: "* For HKID, letters are converted to numbers: A=1, B=2, C=3, ..., Z=26.",
+                stepSum: "1. Sum of Products",
+                stepSumDesc: "Multiply each character's value by its assigned weight, then add them all together to get a Grand Total.",
+                stepMod: "2. Find the Remainder (Mod 11)",
+                whyMod11Title: "Why divide by 11?",
+                whyMod11Desc: "11 is a prime number. Using a prime number ensures that common errors (like swapping '12' to '21') will always produce a different remainder. This helps catch transposition errors effectively.",
+                stepFinal: "3. The Final Digit",
+                whySubtractTitle: "Why 11 minus Remainder?",
+                whySubtractDesc: "The goal is to make the Total Sum (including the check digit) perfectly divisible by 11. If the remainder is 3, we need 8 more to reach 11. So, 11 - 3 = 8. The check digit is 8. (If the result is 10, we use 'A' or 'X').",
+                valTransition: "Now you know how the check digit is created. But how does a computer use it to check your input? Let's test it!",
+                valTitle: "Try Validation (Be the Computer)",
+                valDesc: "Enter a full number WITH its check digit. Try entering a correct one, and then try changing just ONE digit to see how the computer catches the error!",
+                valInputHKID: "Enter Full HKID (e.g. A1234563)",
+                valInputISBN: "Enter Full ISBN-10 (e.g. 0201530821)",
+                btnVerify: "Verify Number",
+                valValid: "Valid Number! The check digit matches.",
+                valInvalid: "Invalid! Typo Detected.",
+                valHowItWorksTitle: "How does the computer know?",
+                valHowItWorksSuccess: "The computer multiplies all digits (including the check digit with a weight of 1) by their weights and adds them up. Because the total sum divided by 11 leaves a remainder of exactly 0, it knows the number is valid.",
+                valHowItWorksFail: "The computer recalculated the check digit using the first part of your input. The result didn't match the last character you provided. This means an error occurred during input.",
+                valMathProof: "Mathematical Proof (Total Sum Mod 11):",
+                valDetectExplain: "The computer cannot tell if it was a transcription or transposition error, it only knows the final remainder is not 0, so the input is rejected."
+            },
+            zh: {
+                appTitle: "檢查數位探索器",
+                introTitle: "什麼是檢查數位 (Check Digit)？",
+                introDesc: "檢查數位是電腦用來找出打字錯誤的數學工具。它是一個附加在重要號碼（如身份證、ISBN、信用卡）末尾的單一數字或字母。它是透過特定公式，由前面的數字自動計算出來的。",
+                redundancyTitle: "冗餘校驗 (Redundancy Check)",
+                redundancyDesc: "這是一種「冗餘校驗」。我們在主要數據後加上額外數據（檢查數位）。如果有人在輸入時打錯字，數學公式的驗證就會失敗，電腦便會拒絕接受該輸入。",
+                errorsTitle: "它能找出的常見錯誤",
+                errorTranscription: "轉錄錯誤 (Transcription Error)",
+                errorTranscriptionDesc: "輸入錯誤的數字（例如：把 '1' 打成 '7'）。",
+                errorTransposition: "調換錯誤 (Transposition Error)",
+                errorTranspositionDesc: "相鄰數字位置對調（例如：把 '21' 打成 '12'）。",
+                errorNote: "<strong>注意：</strong>檢查數位只能「檢測」(Detect) 錯誤，無法「修正」(Correct) 它們。它也無法找出<strong>數據來源錯誤 (Data Source Error)</strong>（即原稿本身已錯，電腦無從得知）。",
+                introTransition: "現在我們知道它是什麼了，接下來看看它是如何運作的。電腦使用一套特定的公式來計算這個數字。讓我們一步步來試試看！",
+                calcTitle: "逐步計算機",
+                selectFormat: "選擇格式：",
+                enterData: "輸入數據以計算檢查數位",
+                usePreset: "使用預設值",
+                isbnHint: "請輸入 ISBN-10 的首 9 位數字。",
+                hkidHint: "請輸入香港身份證的 1 個英文字母及 6 位數字。",
+                btnCalculate: "計算檢查數位",
+                btnReset: "重置",
+                stepByStep: "數學計算過程",
+                whyWeightsTitle: "為什麼要使用「權重」(Weights)？",
+                whyWeightsDesc: "如果我們只是把數字相加 (1+2 = 3)，那麼調換位置 (2+1 = 3) 總和也不會變。透過將每個位置乘以不同的「權重」（例如：1×8 + 2×7 = 22 對比 2×8 + 1×7 = 23），只要數字調換了，總和就會改變。這就是電腦能偵測出調換錯誤的原因！",
+                tblChar: "字符",
+                tblValue: "數值",
+                tblWeight: "權重 (Weight)",
+                weightTooltip: "權重是分配給每個位置的乘數，確保當數字位置調換時，總和會發生改變。",
+                tblProduct: "乘積",
+                hkidValueNote: "* 在香港身份證中，英文字母會轉換為數字：A=1, B=2, C=3, ..., Z=26。",
+                stepSum: "1. 乘積總和 (Sum)",
+                stepSumDesc: "將每個字符的數值乘以其專屬的權重，然後將所有乘積相加，得出一個總和。",
+                stepMod: "2. 找出餘數 (Mod 11)",
+                whyMod11Title: "為什麼要除以 11？",
+                whyMod11Desc: "11 是一個質數 (Prime Number)。使用質數能確保常見錯誤（如把 '12' 打成 '21'）必定會產生不同的餘數。這有助於有效地捕捉調換錯誤。",
+                stepFinal: "3. 最終檢查數位",
+                whySubtractTitle: "為什麼是 11 減去餘數？",
+                whySubtractDesc: "最終目標是讓「包含檢查數位在內的總和」能被 11 整除。如果現在餘數是 3，我們還差 8 就能湊夠 11。所以 11 - 3 = 8，檢查數位就是 8。（如果結果是 10，我們會用 'A' 或 'X' 代替）。",
+                valTransition: "現在你學會了檢查數位是如何產生的。但是，電腦在驗證時又是如何利用它的呢？我們來測試一下！",
+                valTitle: "驗證測試 (扮演電腦角色)",
+                valDesc: "輸入一組「包含」檢查數位的完整號碼。先試試輸入正確的，然後試著故意打錯「一個」數字，看看電腦如何揪出錯誤！",
+                valInputHKID: "輸入完整 HKID (例如 A1234563)",
+                valInputISBN: "輸入完整 ISBN-10 (例如 0201530821)",
+                btnVerify: "驗證號碼",
+                valValid: "有效號碼！檢查數位吻合。",
+                valInvalid: "無效！偵測到輸入錯誤。",
+                valHowItWorksTitle: "電腦是怎麼知道的？",
+                valHowItWorksSuccess: "電腦將所有數字（包括權重為 1 的檢查數位）乘以各自的權重並相加。因為總和除以 11 的餘數剛好是 0，電腦就知道這組號碼是有效的。",
+                valHowItWorksFail: "電腦根據你輸入的前半部分重新計算了一次檢查數位，發現結果跟你提供的最後一個字元不符。這意味著輸入過程中發生了錯誤。",
+                valMathProof: "數學證明 (總和 Mod 11)：",
+                valDetectExplain: "電腦無法區分這是轉錄錯誤還是調換錯誤，它只知道最終餘數不是 0，因此拒絕該輸入。"
+            }
+        };
+
+        function appData() {
+            return {
+                lang: 'en', // Default to English
+                calcMode: 'hkid',
+                
+                // Inputs
+                isbnInput: Array(9).fill(''),
+                isbnResult: '?',
+                
+                hkidPrefix: '',
+                hkidNums: Array(6).fill(''),
+                hkidResult: '?',
+
+                // Steps Data
+                showSteps: false,
+                stepData: [],
+                totalSum: 0,
+                modValue: 11,
+                remainder: 0,
+                finalDigit: '',
+                finalFormula: '',
+
+                // Validation
+                valMode: 'hkid',
+                valInput: '',
+                valResult: null,
+                valExplanation: '',
+                valMathString: '',
+
+                init() {
+                    this.lang = 'en';
+                },
+
+                t(key) {
+                    return translations[this.lang][key];
+                },
+
+                toggleLang() {
+                    this.lang = this.lang === 'en' ? 'zh' : 'en';
+                    this.valResult = null; 
+                },
+
+                setCalcMode(mode) {
+                    this.calcMode = mode;
+                    this.resetCalc();
+                },
+
+                setValMode(mode) {
+                    this.valMode = mode;
+                    this.valResult = null;
+                    this.valInput = '';
+                },
+
+                loadPreset(prefix, nums) {
+                    this.hkidPrefix = prefix;
+                    this.hkidNums = [...nums];
+                    this.showSteps = false;
+                    this.hkidResult = '?';
+                },
+
+                loadPresetISBN(nums) {
+                    this.isbnInput = [...nums];
+                    this.showSteps = false;
+                    this.isbnResult = '?';
+                },
+
+                handleIsbnInput(index, event) {
+                    let val = event.target.value.replace(/[^0-9]/g, '');
+                    this.isbnInput[index] = val;
+                    if (val && index < 8) {
+                        event.target.nextElementSibling.focus();
+                    }
+                    this.showSteps = false;
+                    this.isbnResult = '?';
+                },
+
+                handleHkidPrefix(event) {
+                    let val = event.target.value.replace(/[^a-zA-Z]/g, '').toUpperCase();
+                    this.hkidPrefix = val;
+                    if (val) {
+                        event.target.nextElementSibling.focus();
+                    }
+                    this.showSteps = false;
+                    this.hkidResult = '?';
+                },
+
+                handleHkidNum(index, event) {
+                    let val = event.target.value.replace(/[^0-9]/g, '');
+                    this.hkidNums[index] = val;
+                    if (val && index < 5) {
+                        event.target.nextElementSibling.focus();
+                    }
+                    this.showSteps = false;
+                    this.hkidResult = '?';
+                },
+
+                resetCalc() {
+                    this.isbnInput = Array(9).fill('');
+                    this.isbnResult = '?';
+                    this.hkidPrefix = '';
+                    this.hkidNums = Array(6).fill('');
+                    this.hkidResult = '?';
+                    this.showSteps = false;
+                },
+
+                calculate() {
+                    this.stepData = [];
+                    this.totalSum = 0;
+                    
+                    if (this.calcMode === 'isbn10') {
+                        if (this.isbnInput.some(d => d === '')) {
+                            alert(this.lang === 'en' ? "Please fill all 9 digits." : "請填寫所有 9 位數字。");
+                            return;
+                        }
+                        
+                        for (let i = 0; i < 9; i++) {
+                            let val = parseInt(this.isbnInput[i]);
+                            let weight = 10 - i;
+                            let prod = val * weight;
+                            this.totalSum += prod;
+                            
+                            this.stepData.push({
+                                id: i,
+                                char: val,
+                                val: val,
+                                weight: weight,
+                                product: prod
+                            });
+                        }
+                        
+                        this.modValue = 11;
+                        this.remainder = this.totalSum % 11;
+                        
+                        let check = (11 - this.remainder) % 11;
+                        this.finalDigit = check === 10 ? 'X' : check.toString();
+                        
+                        if(this.remainder === 0) {
+                            this.finalFormula = `11 - 0 = 11 → 0`;
+                        } else {
+                            this.finalFormula = `11 - ${this.remainder} = ${11 - this.remainder} ${check === 10 ? '→ X' : ''}`;
+                        }
+                        
+                        this.isbnResult = this.finalDigit;
+
+                    } else if (this.calcMode === 'hkid') {
+                        if (!this.hkidPrefix || this.hkidNums.some(d => d === '')) {
+                            alert(this.lang === 'en' ? "Please fill the prefix and all 6 digits." : "請填寫字母及所有 6 位數字。");
+                            return;
+                        }
+
+                        let prefixVal = this.hkidPrefix.charCodeAt(0) - 64; // A=1, B=2...
+                        
+                        // Prefix
+                        let pProd = prefixVal * 8;
+                        this.totalSum += pProd;
+                        this.stepData.push({
+                            id: 'p', char: this.hkidPrefix, val: prefixVal, weight: 8, product: pProd
+                        });
+
+                        // Numbers
+                        for (let i = 0; i < 6; i++) {
+                            let val = parseInt(this.hkidNums[i]);
+                            let weight = 7 - i;
+                            let prod = val * weight;
+                            this.totalSum += prod;
+                            
+                            this.stepData.push({
+                                id: i, char: val, val: val, weight: weight, product: prod
+                            });
+                        }
+
+                        this.modValue = 11;
+                        this.remainder = this.totalSum % 11;
+                        
+                        let check = this.remainder === 0 ? 0 : 11 - this.remainder;
+                        this.finalDigit = check === 10 ? 'A' : check.toString();
+                        
+                        if (this.remainder === 0) {
+                            this.finalFormula = `11 - 0 = 11 → 0`;
+                        } else {
+                            this.finalFormula = `11 - ${this.remainder} = ${check} ${check === 10 ? '→ A' : ''}`;
+                        }
+                        
+                        this.hkidResult = this.finalDigit;
+                    }
+
+                    this.showSteps = true;
+                },
+
+                validateData() {
+                    if (!this.valInput) return;
+
+                    if (this.valMode === 'isbn10') {
+                        let input = this.valInput.replace(/[^0-9X]/gi, '').toUpperCase();
+                        if (input.length !== 10) {
+                            alert(this.lang === 'en' ? "Please enter a 10-character ISBN." : "請輸入 10 位字元的 ISBN。");
+                            return;
+                        }
+
+                        let sum = 0;
+                        for (let i = 0; i < 9; i++) {
+                            sum += parseInt(input[i]) * (10 - i);
+                        }
+                        
+                        let remainder = sum % 11;
+                        let expectedCheck = (11 - remainder) % 11;
+                        let expectedChar = expectedCheck === 10 ? 'X' : expectedCheck.toString();
+                        let actualChar = input[9];
+                        
+                        // Calculate total sum including check digit for proof
+                        let checkVal = actualChar === 'X' ? 10 : parseInt(actualChar);
+                        let totalSumWithCheck = sum + (checkVal * 1);
+                        let finalMod = totalSumWithCheck % 11;
+
+                        this.valResult = (expectedChar === actualChar);
+                        this.valMathString = `Total Sum = ${totalSumWithCheck}. ${totalSumWithCheck} ÷ 11 = ${Math.floor(totalSumWithCheck/11)} Remainder ${finalMod}. ${finalMod === 0 ? '(Valid)' : '(Error!)'}`;
+                        
+                        if (this.lang === 'en') {
+                            this.valExplanation = `Calculated check digit for <strong>${input.substring(0,9)}</strong> is <strong class="text-emerald-600 text-xl">${expectedChar}</strong>.<br>You entered <strong class="text-xl">${actualChar}</strong>.`;
+                        } else {
+                            this.valExplanation = `系統為 <strong>${input.substring(0,9)}</strong> 計算出的檢查數位是 <strong class="text-emerald-600 text-xl">${expectedChar}</strong>。<br>您輸入的是 <strong class="text-xl">${actualChar}</strong>。`;
+                        }
+
+                    } else if (this.valMode === 'hkid') {
+                        let input = this.valInput.replace(/[^a-zA-Z0-9]/gi, '').toUpperCase();
+                        if (input.length !== 8) {
+                            alert(this.lang === 'en' ? "Please enter a valid HKID (1 letter + 7 digits)." : "請輸入有效的香港身份證號碼 (1個字母 + 7個數字)。");
+                            return;
+                        }
+
+                        let prefixVal = input.charCodeAt(0) - 64;
+                        let sum = prefixVal * 8;
+                        
+                        for (let i = 0; i < 6; i++) {
+                            sum += parseInt(input[i+1]) * (7 - i);
+                        }
+
+                        let remainder = sum % 11;
+                        let expectedCheck = remainder === 0 ? 0 : 11 - remainder;
+                        let expectedChar = expectedCheck === 10 ? 'A' : expectedCheck.toString();
+                        let actualChar = input[7];
+
+                        // Calculate total sum including check digit for proof
+                        let checkVal = actualChar === 'A' ? 10 : parseInt(actualChar);
+                        let totalSumWithCheck = sum + (checkVal * 1);
+                        let finalMod = totalSumWithCheck % 11;
+
+                        this.valResult = (expectedChar === actualChar);
+                        this.valMathString = `Total Sum = ${totalSumWithCheck}. ${totalSumWithCheck} ÷ 11 = ${Math.floor(totalSumWithCheck/11)} Remainder ${finalMod}. ${finalMod === 0 ? '(Valid)' : '(Error!)'}`;
+
+                        if (this.lang === 'en') {
+                            this.valExplanation = `Calculated check digit for <strong>${input.substring(0,7)}</strong> is <strong class="text-emerald-600 text-xl">${expectedChar}</strong>.<br>You entered <strong class="text-xl">${actualChar}</strong>.`;
+                        } else {
+                            this.valExplanation = `系統為 <strong>${input.substring(0,7)}</strong> 計算出的檢查數位是 <strong class="text-emerald-600 text-xl">${expectedChar}</strong>。<br>您輸入的是 <strong class="text-xl">${actualChar}</strong>。`;
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
