@@ -3,6 +3,8 @@
 ## Overview
 Check Digit Explorer is an interactive, bilingual (English/Traditional Chinese) web application designed for students learning about Information Processing and Data Control. It helps students understand what a check digit is, why it's used, and the step-by-step mathematical algorithm behind calculating and validating check digits for common formats like HKID and ISBN-10.
 
+<img width="1247" height="983" alt="image" src="https://github.com/user-attachments/assets/7862764a-bb22-479d-b917-1ec5bf612ed8" />
+
 ## Learning Objectives
 By using this tool, students will be able to:
 1. **Understand Redundancy Checks:** Learn how adding a single character to important numbers helps computers detect human input errors.
